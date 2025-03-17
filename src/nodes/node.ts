@@ -3,6 +3,13 @@ import express from "express";
 import { BASE_NODE_PORT } from "../config";
 import { Value } from "../types";
 
+type NodeState = {
+  killed: boolean; // this is used to know if the node was stopped by the /stop route. It's important for the unit tests but not very relevant for the Ben-Or implementation
+  x: 0 | 1 | "?" | null; // the current consensus value
+  decided: boolean | null; // used to know if the node reached finality
+  k: number | null; // current step of the node
+};
+
 export async function node(
   nodeId: number, // the ID of the node
   N: number, // total number of nodes in the network
@@ -16,9 +23,22 @@ export async function node(
   node.use(express.json());
   node.use(bodyParser.json());
 
-  // TODO implement this
+  // Internal state for NodeState
+  let nodeState: NodeState = {
+    killed: false, // assume the node is running by default
+    x: initialValue as 0 | 1 | "?" | null, // initial value
+    decided: null, // no finality reached at the beginning
+    k: null, // no steps taken yet
+  };
+
   // this route allows retrieving the current status of the node
-  // node.get("/status", (req, res) => {});
+  node.get("/status", (req: any, res: any) => {
+    if (isFaulty) {
+      return res.status(500).json({ message: "faulty" });
+    } else {
+      return res.status(200).json({ message: "live" })
+    }
+  });
 
   // TODO implement this
   // this route allows the node to receive messages from other nodes
@@ -32,9 +52,10 @@ export async function node(
   // this route is used to stop the consensus algorithm
   // node.get("/stop", async (req, res) => {});
 
-  // TODO implement this
   // get the current state of a node
-  // node.get("/getState", (req, res) => {});
+  node.get("/getState", (req: any, res: any) => {
+    return res.status(200).json(nodeState)
+  });
 
   // start the server
   const server = node.listen(BASE_NODE_PORT + nodeId, async () => {
