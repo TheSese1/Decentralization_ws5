@@ -41,16 +41,54 @@ export async function node(
   });
 
   // TODO implement this
-  // this route allows the node to receive messages from other nodes
-  // node.post("/message", (req, res) => {});
+  node.post("/message", (req: any, res: any) => {
+    const message = req.body;
+
+    if (message.x !== undefined) {
+      nodeState.x = message.x;
+    }
+    if (message.k !== undefined) {
+      nodeState.k = message.k; // Update the node's current step if it's included in the message
+    }
+    if (message.decided !== undefined) {
+      nodeState.decided = message.decided; // Update the finality decision
+    }
+
+    // Response to the sender
+    res.status(200).json({
+      message: `Node ${nodeId} processed the message.`,
+      currentState: nodeState,
+    });
+
+  });
+  // Function to start the consensus process
+  const startConsensus = () => {
+    // Initialize the consensus process when the /start route is called
+    if (nodeState.k === null) {
+      nodeState.k = 0; // Start from step 0 of the consensus
+      nodeState.decided = false; // Not decided yet
+      nodeState.x = initialValue as 0 | 1 | "?" | null; // Set initial value for x
+
+      console.log(`Node ${nodeId} started consensus at step ${nodeState.k}`);
+    }
+  };
 
   // TODO implement this
-  // this route is used to start the consensus algorithm
-  // node.get("/start", async (req, res) => {});
+  node.get("/start", async (req:any, res:any) => {
+    startConsensus(); // Call the startConsensus function when the /start route is triggered
+    res.status(200).json({
+      message: `Node ${nodeId} started consensus at step ${nodeState.k}`,
+      currentState: nodeState,
+    });
+  });
 
   // TODO implement this
   // this route is used to stop the consensus algorithm
-  // node.get("/stop", async (req, res) => {});
+  node.get("/stop", async (req, res) => {
+    nodeState.killed = true; // Set the node's killed state to true
+    console.log(`Node ${nodeId} has been stopped and is no longer active.`);
+    res.status(200).json({ message: `Node ${nodeId} stopped the consensus and is now inactive.` });
+  });
 
   // get the current state of a node
   node.get("/getState", (req: any, res: any) => {
